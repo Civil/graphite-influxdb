@@ -55,8 +55,8 @@ In your graphite-api config file::
        db:   graphite
        ssl: false
        schema:
-         - ['', 60]
-         - ['high-res-metrics', 10]
+         - ['', [['', 30, '24h'], ['5m_', 300, '30d']]]
+         - ['high-res-metrics', [['', 10, '6h'], ['60s_', 60, '24h']]]
 
 
 
@@ -83,7 +83,7 @@ In graphite's ``local_settings.py``::
     INFLUXDB_DB =  "graphite"
     INFLUXDB_SSL = "false"
     INFLUXDB_SCHEMA = [
-        ('', 60),
-        ('high-res-metrics', 10)
+        ('', [['', 30, '24h'], ['5m_', 300, '30d']]),
+        ('high-res-metrics', [['', 10, '6h'], ['60s_', 60, '24h']])
     ]
 

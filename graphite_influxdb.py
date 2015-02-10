@@ -105,6 +105,7 @@ def normalize_config(config=None):
         ret['schema'] = cfg.get('schema', [])
         ret['log_file'] = cfg.get('log_file', None)
         ret['log_level'] = cfg.get('log_level', 'info')
+        ret['display_metrics'] = cfg.get('display_metrics', '^[^\.]*')
     else:
         from django.conf import settings
         ret['host'] = getattr(settings, 'INFLUXDB_HOST', 'localhost')
@@ -120,6 +121,7 @@ def normalize_config(config=None):
         # Default log level is 'info'
         ret['log_level'] = getattr(
             settings, 'INFLUXDB_LOG_LEVEL', 'info')
+        ret['display_metrics'] = getattr(settings, 'INFLUXDB_DISPLAY_METRICS', '^[^\.]*')
     return ret
 
 def convert_time(value):
@@ -285,7 +287,7 @@ class InfluxLeafNode(LeafNode):
 
 class InfluxdbFinder(object):
     __fetch_multi__ = 'influxdb'
-    __slots__ = ('client', 'schemas', 'cache')
+    __slots__ = ('client', 'schemas', 'cache', 'display_metrics')
 
     def __init__(self, config=None):
         # Shouldn't be trying imports in __init__.
@@ -299,6 +301,7 @@ class InfluxdbFinder(object):
                          re.compile(name_prefix),
                          [[prefix, step, convert_time(storage_time)] for [prefix, step, storage_time] in steps]
                         ) for (name_prefix, steps) in config['schema']]
+        self.display_metrics = config['display_metrics']
         self._setup_logger(config['log_level'], config['log_file'])
 
     def _setup_logger(self, level, log_file):
@@ -349,6 +352,11 @@ class InfluxdbFinder(object):
         """Turn wildcard queries into compiled regex
         * becomes .*
         . becomes \."""
+        # Special case when user requests all metrics (like getting list for dashboard)
+        if series and query.pattern == "*":
+            regex = self.display_metrics
+            return re.compile(regex)
+
         regex = '^{0}'
         if not series:
             regex += '$'
